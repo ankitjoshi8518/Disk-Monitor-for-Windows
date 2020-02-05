@@ -1,0 +1,55 @@
+$datetime=Get-Date -Format "dd/MM/yyyy hh:mm"  
+
+$servers=Get-Content -Path "D:\servers.txt"  #List all the servers in a text file and provide the location here
+$alert=0                                     #setting alert variable for future use to send Email alert
+$thresholdfreespace=10                       #specify the threshold for free space on the disk
+
+for ($j=0; $j -lt $servers.Length;$j++)      #Run the script for every server in txt file
+
+{
+
+    $servername=$servers[$j]    #saving server FQDN
+    $drives=Get-WmiObject -computername $servername -Class Win32_logicaldisk -Filter "DriveType = '3'" #get the active drives on the server
+    $diskspace=Get-WmiObject -computername $servername -Class Win32_logicaldisk -Filter "DriveType = '3'" | 
+    Select-Object -Property DeviceID, DriveType, VolumeName,size,freespace                              #Get all the details about the active volumes on the server 
+
+
+    for ($i=0;$i -lt $drives.Length;$i++)   # check the size of the drive and update the log files
+        {
+            if ($diskspace.freespace[$i]/1GB -lt $thresholdfreespace )     # check if the free disk space is less than threshold limit
+                    {
+                    #Add-content cmdlet will append the logs to file at specified location
+                    Add-Content D:\FREE-SPACE-LESS-THAN-THRESHOLD-ALERT.txt "-----------------------------------RUNNING SCRIPT AT $datetime----------------------------------------------------------"
+                    Add-Content D:\FREE-SPACE-LESS-THAN-THRESHOLD-ALERT.txt "*************LOW DISK SPACE ON $servername*************"
+                    $driveletter=$diskspace.deviceid[$i]  #save drive letter
+                    $drivesize=$diskspace.size[$i]/1GB    #save size of volume and convert it to GB
+                    $drivefreespace=$diskspace.freespace[$i]/1GB  # save available space on volume and convert it to GB
+                    
+                    #Saving the contents to 
+                    Add-Content D:\FREE-SPACE-LESS-THAN-THRESHOLD-ALERT.txt "DRIVE LETTER: $driveletter " 
+                    Add-Content D:\FREE-SPACE-LESS-THAN-THRESHOLD-ALERT.txt "DISK SIZE: $drivesize " 
+                    Add-Content D:\FREE-SPACE-LESS-THAN-THRESHOLD-ALERT.txt "FREE SPACE: $drivefreespace" 
+                    $alert++
+                                    
+                    }
+
+            if ($diskspace.freespace[$i]/1GB -gt $thresholdfreespace )
+                    {
+                    Add-Content D:\FREE-SPACE-MORE-THAN-THRESHOLD.txt "-----------------------------------RUNNING SCRIPT AT $datetime----------------------------------------------------------"                   
+                    Add-Content D:\FREE-SPACE-MORE-THAN-THRESHOLD.txt "-------------MORE THAN $thresholdfreespace GB DISK SPACE ON $servername-------------"
+                    $driveletter=$diskspace.deviceid[$i]
+                    $drivesize=$diskspace.size[$i]/1GB
+                    $drivefreespace=$diskspace.freespace[$i]/1GB
+                    
+                    Add-Content D:\FREE-SPACE-MORE-THAN-THRESHOLD.txt "DRIVE LETTER: $driveletter "
+                   
+                   Add-Content D:\FREE-SPACE-MORE-THAN-THRESHOLD.txt "DISK SIZE: $drivesize " 
+                     
+                    Add-Content D:\FREE-SPACE-MORE-THAN-THRESHOLD.txt "FREE SPACE: $drivefreespace" 
+                     
+               
+                    }
+        }
+
+
+}
