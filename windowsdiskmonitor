@@ -71,7 +71,7 @@ $Outlook = New-Object -ComObject Outlook.Application
 #create Outlook MailItem named Mail using CreateItem() method
 $Mail = $Outlook.CreateItem(0)
 #add properties as desired
-$Mail.To = "ankit.j@graphicint.com"
+$Mail.To = "EMAILHERE
 $Mail.Subject = "SOME SERVERS ARE LOW ON STORAGE... CHECK THE LOGS"
 $Mail.Body = "SOME SERVERS ARE LOW ON STORAGE... CHECK THE LOGS"
 #send message
