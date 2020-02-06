@@ -10,5 +10,9 @@ Open the script and change the location for log files, threshold, server list an
 
 Run it with domain privileged account so that you do not encounter permission issue.
 
+If any servers are running low on storage space, it will also send you a pop up message.
+
+Customize the messages as required in the script.
+
 
 
