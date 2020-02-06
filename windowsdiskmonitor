@@ -1,8 +1,11 @@
 $datetime=Get-Date -Format "dd/MM/yyyy hh:mm"  
 
 $servers=Get-Content -Path "D:\servers.txt"  #List all the servers in a text file and provide the location here
-$alert=0                                     #setting alert variable for future use to send Email alert
+$notify=0                                    #setting alert variable for future use to send Email alert
+                                    
 $thresholdfreespace=10                       #specify the threshold for free space on the disk
+$freespacelessthanthresholddir= "D:\FREE-SPACE-LESS-THAN-THRESHOLD-ALERT.txt"
+$freespacemorethanthresholddir= "D:\FREE-SPACE-MORE-THAN-THRESHOLD.txt"
 
 for ($j=0; $j -lt $servers.Length;$j++)      #Run the script for every server in txt file
 
@@ -19,33 +22,34 @@ for ($j=0; $j -lt $servers.Length;$j++)      #Run the script for every server in
             if ($diskspace.freespace[$i]/1GB -lt $thresholdfreespace )     # check if the free disk space is less than threshold limit
                     {
                     #Add-content cmdlet will append the logs to file at specified location
-                    Add-Content D:\FREE-SPACE-LESS-THAN-THRESHOLD-ALERT.txt "-----------------------------------RUNNING SCRIPT AT $datetime----------------------------------------------------------"
-                    Add-Content D:\FREE-SPACE-LESS-THAN-THRESHOLD-ALERT.txt "*************LOW DISK SPACE ON $servername*************"
+                    Add-Content $freespacelessthanthresholddir "-----------------------------------RUNNING SCRIPT AT $datetime----------------------------------------------------------"
+                    Add-Content $freespacelessthanthresholddir "*************LOW DISK SPACE ON $servername*************"
                     $driveletter=$diskspace.deviceid[$i]  #save drive letter
                     $drivesize=$diskspace.size[$i]/1GB    #save size of volume and convert it to GB
                     $drivefreespace=$diskspace.freespace[$i]/1GB  # save available space on volume and convert it to GB
                     
                     #Saving the contents to 
-                    Add-Content D:\FREE-SPACE-LESS-THAN-THRESHOLD-ALERT.txt "DRIVE LETTER: $driveletter " 
-                    Add-Content D:\FREE-SPACE-LESS-THAN-THRESHOLD-ALERT.txt "DISK SIZE: $drivesize " 
-                    Add-Content D:\FREE-SPACE-LESS-THAN-THRESHOLD-ALERT.txt "FREE SPACE: $drivefreespace" 
-                    $alert++
+                    Add-Content $freespacelessthanthresholddir "DRIVE LETTER: $driveletter " 
+                    Add-Content $freespacelessthanthresholddir "DISK SIZE: $drivesize " 
+                    Add-Content $freespacelessthanthresholddir "FREE SPACE: $drivefreespace" 
+                    
+                    $notify++  #Increment the variable value to send alert 
                                     
                     }
 
             if ($diskspace.freespace[$i]/1GB -gt $thresholdfreespace )
                     {
-                    Add-Content D:\FREE-SPACE-MORE-THAN-THRESHOLD.txt "-----------------------------------RUNNING SCRIPT AT $datetime----------------------------------------------------------"                   
-                    Add-Content D:\FREE-SPACE-MORE-THAN-THRESHOLD.txt "-------------MORE THAN $thresholdfreespace GB DISK SPACE ON $servername-------------"
+                    Add-Content $freespacemorethanthresholddir "-----------------------------------RUNNING SCRIPT AT $datetime----------------------------------------------------------"                   
+                    Add-Content $freespacemorethanthresholddir "-------------MORE THAN $thresholdfreespace GB DISK SPACE ON $servername-------------"
                     $driveletter=$diskspace.deviceid[$i]
                     $drivesize=$diskspace.size[$i]/1GB
                     $drivefreespace=$diskspace.freespace[$i]/1GB
                     
-                    Add-Content D:\FREE-SPACE-MORE-THAN-THRESHOLD.txt "DRIVE LETTER: $driveletter "
+                    Add-Content $freespacemorethanthresholddir "DRIVE LETTER: $driveletter "
                    
-                   Add-Content D:\FREE-SPACE-MORE-THAN-THRESHOLD.txt "DISK SIZE: $drivesize " 
+                   Add-Content $freespacemorethanthresholddir "DISK SIZE: $drivesize " 
                      
-                    Add-Content D:\FREE-SPACE-MORE-THAN-THRESHOLD.txt "FREE SPACE: $drivefreespace" 
+                    Add-Content $freespacemorethanthresholddir "FREE SPACE: $drivefreespace" 
                      
                
                     }
@@ -53,3 +57,29 @@ for ($j=0; $j -lt $servers.Length;$j++)      #Run the script for every server in
 
 
 }
+
+if ($notify -gt 0)
+
+{
+
+msg console /server:localhost "SOME SERVERS ARE LOW ON STORAGE... CHECK THE LOGS"  # send pop up message on local computer
+
+# Send an Email when any of the server is low on storage
+
+#create COM object named Outlook
+$Outlook = New-Object -ComObject Outlook.Application
+#create Outlook MailItem named Mail using CreateItem() method
+$Mail = $Outlook.CreateItem(0)
+#add properties as desired
+$Mail.To = "ankit.j@graphicint.com"
+$Mail.Subject = "SOME SERVERS ARE LOW ON STORAGE... CHECK THE LOGS"
+$Mail.Body = "SOME SERVERS ARE LOW ON STORAGE... CHECK THE LOGS"
+#send message
+$Mail.Send()
+#quit and cleanup
+$Outlook.Quit()
+[System.Runtime.Interopservices.Marshal]::ReleaseComObject($Outlook) | Out-Null
+
+
+}
+
