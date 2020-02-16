@@ -1,11 +1,12 @@
 $datetime=Get-Date -Format "dd/MM/yyyy hh:mm"  
 
-$servers=Get-Content -Path "D:\servers.txt"  #List all the servers in a text file and provide the location here
+$servers=Get-Content -Path "C:\disk-monitoring\servers.txt"  #List all the servers in a text file and provide the location here
 $notify=0                                    #setting alert variable for future use to send Email alert
                                     
-$thresholdfreespace=10                       #specify the threshold for free space on the disk
-$freespacelessthanthresholddir= "D:\FREE-SPACE-LESS-THAN-THRESHOLD-ALERT.txt"
-$freespacemorethanthresholddir= "D:\FREE-SPACE-MORE-THAN-THRESHOLD.txt"
+$thresholdfreespace=5                      #specify the threshold for free space on the disk
+$freespacelessthanthresholddir= "C:\disk-monitoring\FREE-SPACE-LESS-THAN-THRESHOLD-ALERT.txt"
+$freespacemorethanthresholddir= "C:\disk-monitoring\FREE-SPACE-MORE-THAN-THRESHOLD.txt"
+$serverslowonstorage==New-Object System.Collections.ArrayList #saving the list of servers to include in Email notification
 
 for ($j=0; $j -lt $servers.Length;$j++)      #Run the script for every server in txt file
 
@@ -16,6 +17,7 @@ for ($j=0; $j -lt $servers.Length;$j++)      #Run the script for every server in
     $diskspace=Get-WmiObject -computername $servername -Class Win32_logicaldisk -Filter "DriveType = '3'" | 
     Select-Object -Property DeviceID, DriveType, VolumeName,size,freespace                              #Get all the details about the active volumes on the server 
 
+    
 
     for ($i=0;$i -lt $drives.Length;$i++)   # check the size of the drive and update the log files
         {
@@ -28,12 +30,13 @@ for ($j=0; $j -lt $servers.Length;$j++)      #Run the script for every server in
                     $drivesize=$diskspace.size[$i]/1GB    #save size of volume and convert it to GB
                     $drivefreespace=$diskspace.freespace[$i]/1GB  # save available space on volume and convert it to GB
                     
-                    #Saving the contents to 
+                    #Saving the contents to log file
                     Add-Content $freespacelessthanthresholddir "DRIVE LETTER: $driveletter " 
                     Add-Content $freespacelessthanthresholddir "DISK SIZE: $drivesize " 
                     Add-Content $freespacelessthanthresholddir "FREE SPACE: $drivefreespace" 
                     
-                    $notify++  #Increment the variable value to send alert 
+                    $notify++  #Increment the variable value to send alert
+                    $serverslowonstorage.Add($servername)  # saving the server name 
                                     
                     }
 
@@ -46,12 +49,9 @@ for ($j=0; $j -lt $servers.Length;$j++)      #Run the script for every server in
                     $drivefreespace=$diskspace.freespace[$i]/1GB
                     
                     Add-Content $freespacemorethanthresholddir "DRIVE LETTER: $driveletter "
-                   
-                   Add-Content $freespacemorethanthresholddir "DISK SIZE: $drivesize " 
-                     
+                    Add-Content $freespacemorethanthresholddir "DISK SIZE: $drivesize " 
                     Add-Content $freespacemorethanthresholddir "FREE SPACE: $drivefreespace" 
-                     
-               
+                                 
                     }
         }
 
@@ -59,27 +59,7 @@ for ($j=0; $j -lt $servers.Length;$j++)      #Run the script for every server in
 }
 
 if ($notify -gt 0)
-
-{
-
-msg console /server:localhost "SOME SERVERS ARE LOW ON STORAGE... CHECK THE LOGS"  # send pop up message on local computer
-
-# Send an Email when any of the server is low on storage
-
-#create COM object named Outlook
-$Outlook = New-Object -ComObject Outlook.Application
-#create Outlook MailItem named Mail using CreateItem() method
-$Mail = $Outlook.CreateItem(0)
-#add properties as desired
-$Mail.To = "EMAILHERE
-$Mail.Subject = "SOME SERVERS ARE LOW ON STORAGE... CHECK THE LOGS"
-$Mail.Body = "SOME SERVERS ARE LOW ON STORAGE... CHECK THE LOGS"
-#send message
-$Mail.Send()
-#quit and cleanup
-$Outlook.Quit()
-[System.Runtime.Interopservices.Marshal]::ReleaseComObject($Outlook) | Out-Null
-
-
-}
+    {
+        Send-MailMessage -From "FromEmailAddress" -SmtpServer "SMTPSERVER" -Subject "SERVERS LOW ON STORAGE" -Body "AVAILABLE DISK SPACE LESS THAN 5GB ON THESE SERVERS: $serverslowonstorage "  -To "RECIPIENT EMAIL"
+    }
 
